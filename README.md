@@ -33,7 +33,7 @@ During the installation you only need to install toolkit, not the drivers or doc
 Open the training.yaml file and modify the parameters according to your needs  <br /> 
 If its the first time you are training you want to leave upgrade_model to True  <br /> 
 The pretrained_3d_model variable should be your old modelscope text to video model or your new model path if you set upgrade_model to False  <br /> 
-The pretrained_2d_model can be any diffusion text2img model (using during validation)
+The pretrained_2d_model can be any diffusion text2img model (used during validation)
 
 ## Train
 ```python
