@@ -49,7 +49,7 @@ Example usage, where times is how many times you want to continue video generati
 python inference.py \
   --model img2vid \
   --prompt "a fast moving fancy sports car" \
-  --init_image "car.png" \
+  --init-image "car.png" \
   --num-frames 16 \
   --width 512 \
   --height 512 \
