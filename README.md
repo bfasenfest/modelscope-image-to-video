@@ -38,7 +38,7 @@ Animating a static image:
 python inference.py \
   --model checkpoint-path \
   --prompt "an astronaut is walking on the moon" \
-  --init-image "car.png" \
+  --init-image "image.png" \
   --num-frames 16 \
   --times 1 \
   --sdp
