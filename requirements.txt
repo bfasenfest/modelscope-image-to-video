@@ -14,5 +14,3 @@ torchvision==0.15.1+cu118
 tqdm==4.65.0
 transformers==4.28.1
 xformers==0.0.20
-~==rch
-~orch==2.0.0+cu118
