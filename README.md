@@ -36,7 +36,7 @@ The `inference.py` script can be used to render videos with trained checkpoints.
 Animating a static image:
 ```
 python inference.py \
-  --model motexture/image-to-video-ms-3.4b \
+  --model checkpoint-path \
   --prompt "an astronaut is walking on the moon" \
   --init-image "car.png" \
   --num-frames 16 \
@@ -47,7 +47,7 @@ python inference.py \
 Using a custom 2d text to image diffusion model for image conditioning instead of a init image:
 ```
 python inference.py \
-  --model motexture/image-to-video-ms-3.4b \
+  --model checkpoint-path \
   --prompt "an astronaut is walking on the moon" \
   --model-2d stabilityai/stable-diffusion-2-1 \
   --num-frames 16 \
@@ -60,7 +60,7 @@ python inference.py \
 Creating infinite length videos by using the last frame as the new init image and by increasing the --times parameter:
 ```
 python inference.py \
-  --model motexture/image-to-video-ms-3.4b \
+  --model checkpoint-path \
   --prompt "an astronaut is walking on the moon" \
   --model-2d stabilityai/stable-diffusion-2-1 \
   --num-frames 16 \
