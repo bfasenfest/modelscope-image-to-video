@@ -47,7 +47,7 @@ The `inference.py` script can be used to render videos with trained checkpoints.
 Example usage, where times is how many times you want to continue video generation using the newly generated last frame as the new image conditioner (potentially infinite length videos)
 ```
 python inference.py \
-  --model img2vid \
+  --model motexture/image-to-video-ms-3.4b \
   --prompt "a fast moving fancy sports car" \
   --init-image "car.png" \
   --num-frames 16 \
@@ -57,10 +57,10 @@ python inference.py \
   --sdp
 ```
 
-Or if you prefer to use a 2d text to video model for image conditioning instead of a init-image:
+Or if you prefer to use a 2d text to image model for image conditioning instead of a init-image:
 ```
 python inference.py \
-  --model img2vid \
+  --model motexture/image-to-video-ms-3.4b \
   --prompt "a fast moving fancy sports car" \
   --model-2d "stabilityai/stable-diffusion-2-1" \
   --num-frames 16 \
