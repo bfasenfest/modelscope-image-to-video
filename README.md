@@ -1,7 +1,7 @@
-# Modelscope text2video transformed to text + img2video
-## Finetune the modelscope text to video model to support image conditioning and create infinite length videos
+# Modelscope text to video synthesis model transformed to be text + image to video
+## Training and inference scripts for creating videos from a static image
 
-This project involves fine tuning the modelscope damo text to video to support image conditioning
+This project contains the code for transforming the modelscope text to video synthesis model to a text + image to video model and the code for generating videos with the new model.
 
 ## Getting Started
 
@@ -17,17 +17,6 @@ cd modelscope-img2video
 pip install deepspeed
 pip install -r requirements.txt
 ```
-
-On some systems, deepspeed requires installing the CUDA toolkit first in order to properly install. If you do not have CUDA toolkit, or deepspeed shows an error follow the instructions by NVIDIA: https://developer.nvidia.com/cuda-downloads
-
-or on linux systems:
-```bash
-sudo apt install build-essential
-wget https://developer.download.nvidia.com/compute/cuda/12.2.0/local_installers/cuda_12.2.0_535.54.03_linux.run
-sudo sh cuda_12.2.0_535.54.03_linux.run
-```
-
-During the installation you only need to install toolkit, not the drivers or documentation.
 
 ## Preparing the config file
 Open the training.yaml file and modify the parameters according to your needs  <br /> 
@@ -72,4 +61,5 @@ python inference.py \
 ## Shoutouts
 
 - [ExponentialML](https://github.com/ExponentialML/Text-To-Video-Finetuning/) for the original training and inference code
+- [bfasenfest](https://github.com/bfasenfest) for his contribution to the training and testing phases
 - [Showlab](https://github.com/showlab/Tune-A-Video) and [bryandlee](https://github.com/bryandlee/Tune-A-Video) for their Tune-A-Video contribution
