@@ -37,8 +37,8 @@ Example usage, where times is how many times you want to continue video generati
 ```
 python inference.py \
   --model motexture/image-to-video-ms-3.4b \
-  --prompt "a fast moving fancy sports car" \
-  --init-image "car.png" \
+  --prompt "an astronaut is walking on the moon" \
+  --init-image "image.png" \
   --num-frames 16 \
   --width 512 \
   --height 512 \
@@ -50,7 +50,7 @@ Or if you prefer to use a 2d text to image model for image conditioning instead 
 ```
 python inference.py \
   --model motexture/image-to-video-ms-3.4b \
-  --prompt "a fast moving fancy sports car" \
+  --prompt "an astronaut is walking on the moon" \
   --model-2d "stabilityai/stable-diffusion-2-1" \
   --num-frames 16 \
   --width 512 \
