@@ -18,11 +18,11 @@ pip install deepspeed
 pip install -r requirements.txt
 ```
 
-## Preparing the config file
-Open the training.yaml file and modify the parameters according to your needs  <br /> 
-If its the first time you are training you want to leave upgrade_model to True  <br /> 
-The pretrained_3d_model variable should be your old modelscope text to video model or your new model path if you set upgrade_model to False  <br /> 
-The pretrained_2d_model can be any diffusion text2img model (used during validation)
+Deepspeed is required if you want to use the training script.
+
+## Preparing the config file for training
+Open the training.yaml file and modify the parameters according to your needs.  <br /> 
+upgrade_model should be True if you want to transform an old text to video modelscope model to the new text + image to video model.  <br /> 
 
 ## Train
 ```python
@@ -33,20 +33,31 @@ deepspeed train.py --config training.yaml
 ## Running inference
 The `inference.py` script can be used to render videos with trained checkpoints.
 
-Example usage, where times is how many times you want to continue video generation using the newly generated last frame as the new image conditioner (potentially infinite length videos)
+Animating a static image:
 ```
 python inference.py \
   --model motexture/image-to-video-ms-3.4b \
   --prompt "an astronaut is walking on the moon" \
-  --init-image "image.png" \
+  --init-image "car.png" \
   --num-frames 16 \
-  --width 512 \
-  --height 512 \
-  --times 4 \
+  --times 1 \
   --sdp
 ```
 
-Or if you prefer to use a 2d text to image model for image conditioning instead of a init-image:
+Using a custom 2d text to image diffusion model for image conditioning instead of a init image:
+```
+python inference.py \
+  --model motexture/image-to-video-ms-3.4b \
+  --prompt "an astronaut is walking on the moon" \
+  --model-2d "stabilityai/stable-diffusion-2-1" \
+  --num-frames 16 \
+  --width 512 \
+  --height 512 \
+  --times 1 \
+  --sdp
+```
+
+Creating infinite length videos by using the last frame as the new init image and by increasing the --times parameter:
 ```
 python inference.py \
   --model motexture/image-to-video-ms-3.4b \
@@ -58,6 +69,7 @@ python inference.py \
   --times 4 \
   --sdp
 ```
+
 ## Shoutouts
 
 - [ExponentialML](https://github.com/ExponentialML/Text-To-Video-Finetuning/) for the original training and inference code
