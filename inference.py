@@ -23,6 +23,13 @@ from tqdm import trange
 from uuid import uuid4
 from diffusers.utils import PIL_INTERPOLATION
 
+def save_image(tensor, filename):
+    tensor = tensor.cpu().numpy()  # Move to CPU
+    tensor = tensor.transpose((1, 2, 0))  # Swap tensor dimensions to HWC
+    tensor = (tensor * 255).astype('uint8')  # Denormalize
+    img = Image.fromarray(tensor)  # Convert to a PIL image
+    img.save(filename)  # Save image
+
 def preprocess(image):
     if isinstance(image, torch.Tensor):
         return image
@@ -289,6 +296,7 @@ def inference(
     vae_batch_size: int = 8,
     num_steps: int = 50,
     guidance_scale: float = 15,
+    image_guidance_scale: float = 7.5,
     device: str = "cuda",
     xformers: bool = False,
     sdp: bool = False,
@@ -301,7 +309,8 @@ def inference(
 
     if init_image is None:
         stable_diffusion_pipe = DiffusionPipeline.from_pretrained(model_2d, torch_dtype=torch.float16).to(device)
-        init_image = stable_diffusion_pipe(prompt, width=width, height=height, output_type="pt").images[0]
+        init_image = stable_diffusion_pipe(prompt=prompt, negative_prompt=negative_prompt, width=width, height=height, guidance_scale=image_guidance_scale, output_type="pt").images[0]
+        #save_image(init_image, f"output/{prompt}.png")
         init_image = init_image.unsqueeze(0)
         del stable_diffusion_pipe
         torch.cuda.empty_cache()
@@ -331,8 +340,13 @@ def inference(
                 generator=torch.Generator().manual_seed(seed)
             )
 
-            init_image = latents[:, :, -1, :, :]
+            # Smooth transitions. Suggested by bfasenfest
+            if t != 0:  # not the first iteration
+                # average last three frames of previous latent and first three frames of current latent
+                video_latents[-1][:, :, -3:, :, :] = (video_latents[-1][:, :, -3:, :, :] + latents[:, :, :3, :, :]) / 2
+
             video_latents.append(latents)
+            init_image = latents[:, :, -1, :, :]
 
         # decode latents to pixel space
         videos = decode(pipe, torch.cat(video_latents, dim=0), vae_batch_size)
@@ -358,6 +372,7 @@ if __name__ == "__main__":
     parser.add_argument("-VB", "--vae-batch-size", type=int, default=8, help="Batch size for VAE encoding/decoding to/from latents (higher values = faster inference, but more memory usage).")
     parser.add_argument("-s", "--num-steps", type=int, default=25, help="Number of diffusion steps to run per frame.")
     parser.add_argument("-g", "--guidance-scale", type=float, default=14, help="Scale for guidance loss (higher values = more guidance, but possibly more artifacts).")
+    parser.add_argument("-IG", "--image-guidance-scale", type=float, default=7.5, help="Scale for guidance loss for 2d model (higher values = more guidance, but possibly more artifacts).")
     parser.add_argument("-f", "--fps", type=int, default=12, help="FPS of output video")
     parser.add_argument("-d", "--device", type=str, default="cuda", help="Device to run inference on (defaults to cuda).")
     parser.add_argument("-x", "--xformers", action="store_true", help="Use XFormers attnetion, a memory-efficient attention implementation (requires `pip install xformers`).")
@@ -386,6 +401,7 @@ if __name__ == "__main__":
         vae_batch_size=args.vae_batch_size,
         num_steps=args.num_steps,
         guidance_scale=args.guidance_scale,
+        image_guidance_scale=args.image_guidance_scale,
         device=args.device,
         seed=args.seed,
         xformers=args.xformers,
