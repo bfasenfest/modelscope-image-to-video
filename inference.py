@@ -411,7 +411,7 @@ if __name__ == "__main__":
         seed=args.seed,
         xformers=args.xformers,
         sdp=args.sdp,
-        times=args.times
+        times=args.times,
         save_image=args.save_image
     )
 
