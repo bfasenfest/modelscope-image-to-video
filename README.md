@@ -33,6 +33,19 @@ deepspeed train.py --config training.yaml
 ## Running inference
 The `inference.py` script can be used to render videos with trained checkpoints.
 
+Using a custom 2d text to image diffusion model for image conditioning:
+```
+python inference.py \
+  --model checkpoint-path \
+  --prompt "an astronaut is walking on the moon" \
+  --model-2d stabilityai/stable-diffusion-xl-base-1.0 \
+  --num-frames 16 \
+  --width 512 \
+  --height 512 \
+  --times 1 \
+  --sdp
+```
+
 Animating a static image:
 ```
 python inference.py \
@@ -44,25 +57,12 @@ python inference.py \
   --sdp
 ```
 
-Using a custom 2d text to image diffusion model for image conditioning instead of a init image:
-```
-python inference.py \
-  --model checkpoint-path \
-  --prompt "an astronaut is walking on the moon" \
-  --model-2d stabilityai/stable-diffusion-2-1 \
-  --num-frames 16 \
-  --width 512 \
-  --height 512 \
-  --times 1 \
-  --sdp
-```
-
 Creating infinite length videos by using the last frame as the new init image and by increasing the --times parameter:
 ```
 python inference.py \
   --model checkpoint-path \
   --prompt "an astronaut is walking on the moon" \
-  --model-2d stabilityai/stable-diffusion-2-1 \
+  --model-2d stabilityai/stable-diffusion-xl-base-1.0 \
   --num-frames 16 \
   --width 512 \
   --height 512 \
