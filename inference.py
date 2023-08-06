@@ -302,7 +302,8 @@ def inference(
     sdp: bool = False,
     times: int = 1,
     seed: Optional[int] = None,
-    init_image: torch.Tensor = None
+    init_image: torch.Tensor = None,
+    save_init: bool = False
 ):
     if seed is not None:
         set_seed(seed)
@@ -310,7 +311,9 @@ def inference(
     if init_image is None:
         stable_diffusion_pipe = DiffusionPipeline.from_pretrained(model_2d, torch_dtype=torch.float16).to(device)
         init_image = stable_diffusion_pipe(prompt=prompt, negative_prompt=negative_prompt, width=width, height=height, guidance_scale=image_guidance_scale, output_type="pt").images[0]
-        #save_image(init_image, f"output/{prompt}.png")
+        if (save_init):
+            unique_id = str(uuid4())[:8]
+            save_image(init_image, f"output/{prompt}-{unique_id}.png")
         init_image = init_image.unsqueeze(0)
         del stable_diffusion_pipe
         torch.cuda.empty_cache()
@@ -379,6 +382,8 @@ if __name__ == "__main__":
     parser.add_argument("-S", "--sdp", action="store_true", help="Use SDP attention, PyTorch's built-in memory-efficient attention implementation.")
     parser.add_argument("-r", "--seed", type=int, default=None, help="Random seed to make generations reproducible.")
     parser.add_argument("-t", "--times", type=int, default=None, help="How many times to continue to generate videos")
+    parser.add_argument("-I", "--save-init", action="store_true", help="Save the init image to the output folder for reference")
+
     args = parser.parse_args()
     # fmt: on
 
@@ -406,7 +411,8 @@ if __name__ == "__main__":
         seed=args.seed,
         xformers=args.xformers,
         sdp=args.sdp,
-        times=args.times
+        times=args.times,
+        save_init=args.save_init
     )
 
     # =========================================
