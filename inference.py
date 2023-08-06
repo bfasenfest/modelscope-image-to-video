@@ -343,7 +343,7 @@ def inference(
             # Smooth transitions. Suggested by bfasenfest
             if t != 0:  # not the first iteration
                 # average last three frames of previous latent and first three frames of current latent
-                video_latents[-1][:, :, -3:, :, :] = (video_latents[-1][:, :, -3:, :, :] + latents[:, :, :3, :, :]) / 2
+                video_latents[-1][:, :, -2:, :, :] = (video_latents[-1][:, :, -2:, :, :] + latents[:, :, :2, :, :]) / 2
 
             video_latents.append(latents)
             init_image = latents[:, :, -1, :, :]
