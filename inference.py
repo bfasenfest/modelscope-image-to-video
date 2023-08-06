@@ -382,7 +382,7 @@ if __name__ == "__main__":
     parser.add_argument("-S", "--sdp", action="store_true", help="Use SDP attention, PyTorch's built-in memory-efficient attention implementation.")
     parser.add_argument("-r", "--seed", type=int, default=None, help="Random seed to make generations reproducible.")
     parser.add_argument("-t", "--times", type=int, default=None, help="How many times to continue to generate videos")
-    parser.add_argument("-I", "--save-image", type=bool, default=False, help="Save the init image to the output folder for reference")
+    parser.add_argument("-I", "--save-image", type=bool, action="store_true", help="Save the init image to the output folder for reference")
 
     args = parser.parse_args()
     # fmt: on
