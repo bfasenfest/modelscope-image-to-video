@@ -373,8 +373,8 @@ def inference(
 
             upscaled_reshaped_videos = []
 
-            for i in range(0, reshaped_videos.shape[0], num_frames - 1):
-                reshaped_frames = reshaped_videos[i:i+num_frames - 1]
+            for i in range(0, reshaped_videos.shape[0], concat_videos.shape[2]):
+                reshaped_frames = reshaped_videos[i:i+concat_videos.shape[2]]
                 prompt_repeated = [prompt] * len(reshaped_frames)
                 upscaled_batch_frames = upscaler(
                     prompt=prompt_repeated,
