@@ -16,6 +16,7 @@ cd modelscope-img2video
 ```bash
 pip install deepspeed
 pip install -r requirements.txt
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 ```
 
 Deepspeed is required if you want to use the training script.
@@ -38,7 +39,7 @@ Using a custom 2d text to image diffusion model for image conditioning:
 python inference.py \
   --model checkpoint-path \
   --prompt "an astronaut is walking on the moon" \
-  --model-2d stabilityai/stable-diffusion-xl-base-1.0 \
+  --model-2d stabilityai/stable-diffusion-2-1 \
   --num-frames 16 \
   --width 512 \
   --height 512 \
@@ -62,7 +63,7 @@ Creating infinite length videos by using the last frame as the new init image an
 python inference.py \
   --model checkpoint-path \
   --prompt "an astronaut is walking on the moon" \
-  --model-2d stabilityai/stable-diffusion-xl-base-1.0 \
+  --model-2d stabilityai/stable-diffusion-2-1 \
   --num-frames 16 \
   --width 512 \
   --height 512 \

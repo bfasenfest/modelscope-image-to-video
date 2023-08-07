@@ -10,6 +10,7 @@ import numpy as np
 import os
 import re
 import PIL
+import torch.nn.functional as F
 
 from PIL import Image
 from compel import Compel
@@ -23,6 +24,7 @@ from torch import Tensor
 from tqdm import trange
 from uuid import uuid4
 from diffusers.utils import PIL_INTERPOLATION
+from diffusers import StableDiffusionLatentUpscalePipeline
 
 def save_image(tensor, filename):
     tensor = tensor.cpu().numpy()  # Move to CPU
@@ -292,6 +294,8 @@ def inference(
     negative_prompt: Optional[str] = None,
     width: int = 512,
     height: int = 512,
+    image_width: int = None,
+    image_height: int = None,
     model_2d: str = None,
     num_frames: int = 24,
     vae_batch_size: int = 8,
@@ -304,18 +308,20 @@ def inference(
     times: int = 1,
     seed: Optional[int] = None,
     init_image: torch.Tensor = None,
-    save_init: bool = False
+    save_init: bool = False,
+    upscale: bool = False
 ):
     if seed is not None:
         set_seed(seed)
 
     if init_image is None:
         stable_diffusion_pipe = DiffusionPipeline.from_pretrained(model_2d, torch_dtype=torch.float16).to(device)
-        init_image = stable_diffusion_pipe(prompt=prompt, negative_prompt=negative_prompt, width=width, height=height, guidance_scale=image_guidance_scale, output_type="pt").images[0]
+        init_image = stable_diffusion_pipe(prompt=prompt, negative_prompt=negative_prompt, width=image_width, height=image_height, guidance_scale=image_guidance_scale, output_type="pt").images[0]
         if (save_init):
             unique_id = str(uuid4())[:8]
             save_image(init_image, f"output/{prompt}-{unique_id}.png")
         init_image = init_image.unsqueeze(0)
+        init_image = F.interpolate(init_image, size=(width, height), mode='bilinear', align_corners=False)
         del stable_diffusion_pipe
         torch.cuda.empty_cache()
 
@@ -327,6 +333,8 @@ def inference(
         compel = Compel(tokenizer=pipe.tokenizer, text_encoder=pipe.text_encoder)
         prompt_embeds, negative_prompt_embeds = compel(prompt), compel(negative_prompt) if negative_prompt else None
 
+        generator = torch.Generator().manual_seed(seed)
+        
         video_latents = []
         # run diffusion
         for t in range(0, times):
@@ -341,7 +349,7 @@ def inference(
                 num_inference_steps=num_steps,
                 guidance_scale=guidance_scale,
                 num_frames=num_frames,
-                generator=torch.Generator().manual_seed(seed)
+                generator=generator
             )
 
             # Smooth transitions. Suggested by bfasenfest
@@ -352,8 +360,43 @@ def inference(
             video_latents.append(latents[:, :, 1:, :, :])
             init_image = latents[:, :, -1, :, :]
 
+        # Upscale the latents
+        if upscale:
+            upscaler = StableDiffusionLatentUpscalePipeline.from_pretrained("stabilityai/sd-x2-latent-upscaler", torch_dtype=torch.float16)
+            upscaler.to(device)
+            
+            concat_videos = torch.cat(video_latents, dim=0)
+            batch, channel, frames, W, H = concat_videos.shape
+
+            # Reshape to put frames into the batch dimension
+            reshaped_videos = concat_videos.permute(2, 0, 1, 3, 4).reshape(-1, channel, H, W)  # Shape: (B*F, C, H, W)
+
+            upscaled_reshaped_videos = []
+
+            for i in range(0, reshaped_videos.shape[0], (num_frames - 1)):
+                reshaped_frames = reshaped_videos[i:i+(num_frames - 1)]
+                prompt_repeated = [prompt] * len(reshaped_frames)
+                upscaled_batch_frames = upscaler(
+                    prompt=prompt_repeated,
+                    image=reshaped_frames,
+                    num_inference_steps=20,
+                    guidance_scale=0,
+                    generator=generator,
+                    output_type="latent"
+                ).images
+                upscaled_reshaped_videos.append(upscaled_batch_frames)
+
+            upscaled_reshaped_videos = torch.cat(upscaled_reshaped_videos, dim=0)
+
+            B_times_F, C_prime, H_prime, W_prime = upscaled_reshaped_videos.shape
+
+            # Reshape back to the original structure
+            video_latents = upscaled_reshaped_videos.reshape(frames, batch, C_prime, H_prime, W_prime).permute(1, 2, 0, 3, 4)  # Shape: (B, C', F, H', W')
+        else:
+            video_latents = torch.cat(video_latents, dim=0)
+
         # decode latents to pixel space
-        videos = decode(pipe, torch.cat(video_latents, dim=0), vae_batch_size)
+        videos = decode(pipe, video_latents, vae_batch_size)
 
     return torch.cat(torch.unbind(videos, dim=0), dim=1)
 
@@ -369,8 +412,10 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output-dir", type=str, default="./output", help="Directory to save output video to")
     parser.add_argument("-n", "--negative-prompt", type=str, default=None, help="Text prompt to condition against")
     parser.add_argument("-T", "--num-frames", type=int, default=16, help="Total number of frames to generate")
-    parser.add_argument("-WI", "--width", type=int, default=512, help="Width of the image to generate (if init image is not provided)")
-    parser.add_argument("-HI", "--height", type=int, default=512, help="Height of the image (if init image is not provided)")
+    parser.add_argument("-WI", "--width", type=int, default=512, help="Width of the video to generate (if init image is not provided)")
+    parser.add_argument("-HI", "--height", type=int, default=512, help="Height of the video (if init image is not provided)")
+    parser.add_argument("-IW", "--image-width", type=int, default=None, help="Width of the image to generate (if init image is not provided)")
+    parser.add_argument("-IH", "--image-height", type=int, default=None, help="Height of the image (if init image is not provided)")
     parser.add_argument("-MP", "--model-2d", type=str, default="stabilityai/stable-diffusion-2-1", help="Path to the model for image generation (if init image is not provided)")
     parser.add_argument("-i", "--init-image", type=str, default=None, help="Path to initial image to use")
     parser.add_argument("-VB", "--vae-batch-size", type=int, default=8, help="Batch size for VAE encoding/decoding to/from latents (higher values = faster inference, but more memory usage).")
@@ -385,7 +430,7 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--times", type=int, default=None, help="How many times to continue to generate videos")
     parser.add_argument("-I", "--save-init", action="store_true", help="Save the init image to the output folder for reference")
     parser.add_argument("-N", "--include-model", action="store_true", help="Include the name of the model in the exported file")
-
+    parser.add_argument("-u", "--upscale", action="store_true", help="Use a latent upscaler")
 
     args = parser.parse_args()
     # fmt: on
@@ -397,12 +442,22 @@ if __name__ == "__main__":
     if args.init_image is not None:
         init_image = image_to_tensor(args.init_image)
 
+    image_width = None
+    if args.image_width is None:
+        image_width = args.width
+
+    image_height = None
+    if args.image_height is None:
+        image_height = args.height
+
     videos = inference(
         model=args.model,
         prompt=args.prompt,
         negative_prompt=args.negative_prompt,
         width=args.width,
         height=args.height,
+        image_width=image_width,
+        image_height=image_height,
         model_2d=args.model_2d,
         num_frames=args.num_frames,
         init_image=init_image,
@@ -415,7 +470,8 @@ if __name__ == "__main__":
         xformers=args.xformers,
         sdp=args.sdp,
         times=args.times,
-        save_init=args.save_init
+        save_init=args.save_init,
+        upscale=args.upscale
     )
 
     # =========================================
