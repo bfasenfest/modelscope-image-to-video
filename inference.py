@@ -8,6 +8,7 @@ import subprocess
 import json
 import numpy as np
 import os
+import re
 import PIL
 
 from PIL import Image
@@ -344,11 +345,11 @@ def inference(
             )
 
             # Smooth transitions. Suggested by bfasenfest
-            if t != 0:  # not the first iteration
+            # if t != 0:  # not the first iteration
                 # average last three frames of previous latent and first three frames of current latent
-                video_latents[-1][:, :, -2:, :, :] = (video_latents[-1][:, :, -2:, :, :] + latents[:, :, :2, :, :]) / 2
+                # video_latents[-1][:, :, -1:, :, :] = (video_latents[-1][:, :, -1:, :, :] + latents[:, :, :1, :, :]) / 2
 
-            video_latents.append(latents)
+            video_latents.append(latents[:, :, 1:, :, :])
             init_image = latents[:, :, -1, :, :]
 
         # decode latents to pixel space
@@ -383,6 +384,8 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--seed", type=int, default=None, help="Random seed to make generations reproducible.")
     parser.add_argument("-t", "--times", type=int, default=None, help="How many times to continue to generate videos")
     parser.add_argument("-I", "--save-init", action="store_true", help="Save the init image to the output folder for reference")
+    parser.add_argument("-N", "--include-model", action="store_true", help="Include the name of the model in the exported file")
+
 
     args = parser.parse_args()
     # fmt: on
@@ -426,7 +429,10 @@ if __name__ == "__main__":
         
         unique_id = str(uuid4())[:8]
         out_file = f"{args.output_dir}/{args.prompt}-{unique_id}.mp4"
-        encoded_out_file = f"{args.output_dir}/{args.prompt}-{unique_id}_encoded.mp4"
+        model_name = ""
+        if args.include_model:
+            model_name = re.sub(r'[<>:"/\\|?*\x00-\x1F]', "-", os.path.basename(args.model))
+        encoded_out_file = f"{args.output_dir}/{args.prompt}-{model_name}-{unique_id}_encoded.mp4"
 
         export_to_video(video, out_file, args.fps)
 
