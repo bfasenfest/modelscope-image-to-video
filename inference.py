@@ -25,6 +25,7 @@ from tqdm import trange
 from uuid import uuid4
 from diffusers.utils import PIL_INTERPOLATION
 from diffusers import StableDiffusionLatentUpscalePipeline
+from einops import rearrange
 
 def save_image(tensor, filename):
     tensor = tensor.cpu().numpy()  # Move to CPU
@@ -366,15 +367,14 @@ def inference(
             upscaler.to(device)
             
             concat_videos = torch.cat(video_latents, dim=0)
-            batch, channel, frames, W, H = concat_videos.shape
 
             # Reshape to put frames into the batch dimension
-            reshaped_videos = concat_videos.permute(2, 0, 1, 3, 4).reshape(-1, channel, H, W)  # Shape: (B*F, C, H, W)
+            reshaped_videos = rearrange(concat_videos, 'b c f h w -> (b f) c h w')
 
             upscaled_reshaped_videos = []
 
-            for i in range(0, reshaped_videos.shape[0], (num_frames - 1)):
-                reshaped_frames = reshaped_videos[i:i+(num_frames - 1)]
+            for i in range(0, reshaped_videos.shape[0], num_frames - 1):
+                reshaped_frames = reshaped_videos[i:i+num_frames - 1]
                 prompt_repeated = [prompt] * len(reshaped_frames)
                 upscaled_batch_frames = upscaler(
                     prompt=prompt_repeated,
@@ -388,10 +388,8 @@ def inference(
 
             upscaled_reshaped_videos = torch.cat(upscaled_reshaped_videos, dim=0)
 
-            B_times_F, C_prime, H_prime, W_prime = upscaled_reshaped_videos.shape
-
-            # Reshape back to the original structure
-            video_latents = upscaled_reshaped_videos.reshape(frames, batch, C_prime, H_prime, W_prime).permute(1, 2, 0, 3, 4)  # Shape: (B, C', F, H', W')
+            # Reshape back to the original structure with increased height and width
+            video_latents = rearrange(upscaled_reshaped_videos, '(f b) c (h h2) (w w2) -> b c f (h h2) (w w2)', b=concat_videos.shape[0], f=concat_videos.shape[2], h2=2, w2=2)
         else:
             video_latents = torch.cat(video_latents, dim=0)
 
@@ -418,7 +416,7 @@ if __name__ == "__main__":
     parser.add_argument("-IH", "--image-height", type=int, default=None, help="Height of the image (if init image is not provided)")
     parser.add_argument("-MP", "--model-2d", type=str, default="stabilityai/stable-diffusion-2-1", help="Path to the model for image generation (if init image is not provided)")
     parser.add_argument("-i", "--init-image", type=str, default=None, help="Path to initial image to use")
-    parser.add_argument("-VB", "--vae-batch-size", type=int, default=8, help="Batch size for VAE encoding/decoding to/from latents (higher values = faster inference, but more memory usage).")
+    parser.add_argument("-VB", "--vae-batch-size", type=int, default=16, help="Batch size for VAE encoding/decoding to/from latents (higher values = faster inference, but more memory usage).")
     parser.add_argument("-s", "--num-steps", type=int, default=25, help="Number of diffusion steps to run per frame.")
     parser.add_argument("-g", "--guidance-scale", type=float, default=14, help="Scale for guidance loss (higher values = more guidance, but possibly more artifacts).")
     parser.add_argument("-IG", "--image-guidance-scale", type=float, default=7.5, help="Scale for guidance loss for 2d model (higher values = more guidance, but possibly more artifacts).")
