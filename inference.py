@@ -443,10 +443,14 @@ if __name__ == "__main__":
     image_width = None
     if args.image_width is None:
         image_width = args.width
+    else:
+        image_width = args.image_width
 
     image_height = None
     if args.image_height is None:
         image_height = args.height
+    else:
+        image_height = args.image_height
 
     videos = inference(
         model=args.model,
