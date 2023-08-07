@@ -345,11 +345,11 @@ def inference(
             )
 
             # Smooth transitions. Suggested by bfasenfest
-            if t != 0:  # not the first iteration
+            # if t != 0:  # not the first iteration
                 # average last three frames of previous latent and first three frames of current latent
-                video_latents[-1][:, :, -1:, :, :] = (video_latents[-1][:, :, -1:, :, :] + latents[:, :, :1, :, :]) / 2
+                # video_latents[-1][:, :, -1:, :, :] = (video_latents[-1][:, :, -1:, :, :] + latents[:, :, :1, :, :]) / 2
 
-            video_latents.append(latents[:, :, :-1, :, :])
+            video_latents.append(latents[:, :, 1:, :, :])
             init_image = latents[:, :, -1, :, :]
 
         # decode latents to pixel space
