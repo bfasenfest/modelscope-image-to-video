@@ -322,7 +322,7 @@ def inference(
             unique_id = str(uuid4())[:8]
             save_image(init_image, f"output/{prompt}-{unique_id}.png")
         init_image = init_image.unsqueeze(0)
-        init_image = F.interpolate(init_image, size=(width, height), mode='bilinear', align_corners=False)
+        init_image = F.interpolate(init_image, size=(height, width), mode='bilinear', align_corners=False)
         del stable_diffusion_pipe
         torch.cuda.empty_cache()
 
@@ -368,13 +368,13 @@ def inference(
             
             concat_videos = torch.cat(video_latents, dim=0)
 
-            # Reshape to put frames into the batch dimension
+            # Reshape to put frames of each video into the batch dimension, but keep videos separate
             reshaped_videos = rearrange(concat_videos, 'b c f h w -> (b f) c h w')
 
             upscaled_reshaped_videos = []
 
-            for i in range(0, reshaped_videos.shape[0], concat_videos.shape[2]):
-                reshaped_frames = reshaped_videos[i:i+concat_videos.shape[2]]
+            for i in range(0, reshaped_videos.shape[0], num_frames):
+                reshaped_frames = reshaped_videos[i:i+num_frames]
                 prompt_repeated = [prompt] * len(reshaped_frames)
                 upscaled_batch_frames = upscaler(
                     prompt=prompt_repeated,
@@ -389,7 +389,7 @@ def inference(
             upscaled_reshaped_videos = torch.cat(upscaled_reshaped_videos, dim=0)
 
             # Reshape back to the original structure with increased height and width
-            video_latents = rearrange(upscaled_reshaped_videos, '(f b) c (h h2) (w w2) -> b c f (h h2) (w w2)', b=concat_videos.shape[0], f=concat_videos.shape[2], h2=2, w2=2)
+            video_latents = rearrange(upscaled_reshaped_videos, '(b f) c (h h2) (w w2) -> b c f (h h2) (w w2)', b=concat_videos.shape[0], f=concat_videos.shape[2], h2=2, w2=2)
         else:
             video_latents = torch.cat(video_latents, dim=0)
 
